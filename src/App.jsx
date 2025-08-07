@@ -77,6 +77,31 @@ const DotsVerticalIcon = ({ className = "h-5 w-5" }) => (
     </svg>
 );
 
+// Icons for menu options
+const ViewIcon = () => (
+    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+    </svg>
+);
+
+const EditIcon = () => (
+    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+    </svg>
+);
+
+const DeleteIcon = () => (
+    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>
+);
+
+const RenameIcon = () => (
+    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+    </svg>
+);
 
 // --- Reusable Components ---
 const AnimatedWallpaper = ({ theme }) => {
@@ -106,9 +131,9 @@ const AnimatedWallpaper = ({ theme }) => {
 const OptionsMenu = ({ options, theme }) => {
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef(null);
-    const menuBg = theme === 'dark' ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200';
-    const itemHoverBg = theme === 'dark' ? 'hover:bg-gray-600' : 'hover:bg-gray-100';
-    const textColor = theme === 'dark' ? 'text-gray-300' : 'text-gray-700';
+    const buttonBg = theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200';
+    const menuBg = theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200';
+    const hoverBg = theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-100';
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -116,20 +141,27 @@ const OptionsMenu = ({ options, theme }) => {
                 setIsOpen(false);
             }
         };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [menuRef]);
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     return (
         <div className="relative" ref={menuRef}>
-            <button onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }} className={`p-1 rounded-full ${theme === 'dark' ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}>
-                <DotsVerticalIcon />
+            <button onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }} className={`p-1 rounded-full ${buttonBg} hover:${buttonBg}`}>
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
+                </svg>
             </button>
             {isOpen && (
-                <div className={`absolute right-0 mt-2 w-48 rounded-md shadow-xl z-20 border ${menuBg}`}>
+                <div className={`absolute right-0 mt-2 w-48 rounded-md shadow-lg border ${menuBg} z-50`}>
                     <div className="py-1">
                         {options.map((option, index) => (
-                            <button key={index} onClick={(e) => { e.stopPropagation(); option.action(); setIsOpen(false); }} className={`w-full text-left flex items-center px-4 py-2 text-sm ${textColor} ${itemHoverBg} ${option.isDestructive ? 'text-red-500' : ''}`}>
+                            <button
+                                key={index}
+                                onClick={(e) => { e.stopPropagation(); option.action(); setIsOpen(false); }}
+                                className={`${option.isDestructive ? 'text-red-600' : ''} flex items-center w-full px-4 py-2 text-sm ${hoverBg}`}
+                            >
+                                {option.icon}
                                 {option.label}
                             </button>
                         ))}
@@ -169,27 +201,97 @@ const ProfileDropdown = ({ username, onLogout, onProfileClick, onSettingsClick, 
 };
 
 // --- Modals ---
+const ProjectFormFields = ({ project, handleChange, theme, inputBg, labelColor }) => (
+    <div className="space-y-4">
+        <div>
+            <label className={`block ${labelColor} text-sm font-medium mb-2`}>
+                Project Name <span className="text-red-500">*</span>
+            </label>
+            <input 
+                name="name" 
+                value={project.name} 
+                onChange={handleChange} 
+                placeholder="Enter project name" 
+                className={`w-full p-3 rounded-md border focus:outline-none focus:ring-2 focus:ring-teal-500 ${inputBg}`} 
+            />
+        </div>
+        <div>
+            <label className={`block ${labelColor} text-sm font-medium mb-2`}>Project Description</label>
+            <textarea 
+                name="description" 
+                value={project.description} 
+                onChange={handleChange} 
+                placeholder="Enter project description" 
+                className={`w-full p-3 rounded-md border focus:outline-none focus:ring-2 focus:ring-teal-500 ${inputBg}`} 
+                rows="3"
+            ></textarea>
+        </div>
+        <div>
+            <label className={`block ${labelColor} text-sm font-medium mb-2`}>Project Type</label>
+            <select 
+                name="type" 
+                value={project.type} 
+                onChange={handleChange} 
+                className={`w-full p-3 rounded-md border focus:outline-none focus:ring-2 focus:ring-teal-500 ${inputBg}`}
+            >
+                <option value="">Please select</option>
+                <option value="Web Portal">Web Portal</option>
+                <option value="Mobile App">Mobile App</option>
+                <option value="Both">Both</option>
+                <option value="Backend Service">Backend Service</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+        <div>
+            <label className={`block ${labelColor} text-sm font-medium mb-2`}>Industry</label>
+            <input 
+                name="industry" 
+                value={project.industry} 
+                onChange={handleChange} 
+                placeholder="e.g., FinTech, Healthcare, E-commerce" 
+                className={`w-full p-3 rounded-md border focus:outline-none focus:ring-2 focus:ring-teal-500 ${inputBg}`} 
+            />
+        </div>
+    </div>
+);
+
 const NewProjectModal = ({ onSave, onCancel, theme }) => {
-    const [project, setProject] = useState({ name: '', overview: '', type: 'Web Portal', industry: '' });
+    const [project, setProject] = useState({ 
+        name: '', 
+        description: '', 
+        type: '',
+        industry: ''
+    });
     const handleChange = (e) => setProject(prev => ({ ...prev, [e.target.name]: e.target.value }));
     const modalBg = theme === 'dark' ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-200 text-gray-800';
     const inputBg = theme === 'dark' ? 'bg-gray-700 border-gray-600' : 'bg-gray-100 border-gray-300';
+    const labelColor = theme === 'dark' ? 'text-gray-300' : 'text-gray-600';
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className={`p-8 rounded-lg shadow-2xl w-full max-w-lg border ${modalBg}`}>
                 <h2 className="text-2xl font-bold mb-6">Create New Project</h2>
-                <div className="space-y-4">
-                    <input name="name" value={project.name} onChange={handleChange} placeholder="Product Name" className={`w-full p-3 rounded-md border focus:outline-none focus:ring-2 focus:ring-teal-500 ${inputBg}`} />
-                    <textarea name="overview" value={project.overview} onChange={handleChange} placeholder="Product Overview" className={`w-full p-3 rounded-md border focus:outline-none focus:ring-2 focus:ring-teal-500 ${inputBg}`} rows="3"></textarea>
-                    <select name="type" value={project.type} onChange={handleChange} className={`w-full p-3 rounded-md border focus:outline-none focus:ring-2 focus:ring-teal-500 ${inputBg}`}>
-                        <option>Web Portal</option><option>Mobile App</option><option>Both</option><option>Backend Service</option><option>Other</option>
-                    </select>
-                    <input name="industry" value={project.industry} onChange={handleChange} placeholder="Product Industry (e.g., FinTech, Health)" className={`w-full p-3 rounded-md border focus:outline-none focus:ring-2 focus:ring-teal-500 ${inputBg}`} />
-                </div>
-                <div className="flex justify-end mt-6 space-x-4">
-                    <button onClick={onCancel} className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md">Cancel</button>
-                    <button onClick={() => onSave(project)} className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-md">Create</button>
+                <ProjectFormFields 
+                    project={project}
+                    handleChange={handleChange}
+                    theme={theme}
+                    inputBg={inputBg}
+                    labelColor={labelColor}
+                />
+                <div className="flex justify-between mt-6">
+                    <button onClick={onCancel} className={`${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'} font-bold py-2 px-4 rounded-md`}>Cancel</button>
+                    <button 
+                        onClick={() => onSave({
+                            name: project.name,
+                            overview: project.description,
+                            type: project.type || 'Not Specified',
+                            industry: project.industry || 'Not Specified'
+                        })} 
+                        className={`bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-md ${!project.name ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={!project.name}
+                    >
+                        Create
+                    </button>
                 </div>
             </div>
         </div>
@@ -221,8 +323,16 @@ const ProfileModal = ({ user, onCancel, onUpdate, theme }) => {
                     <div>
                         <label className={`text-sm font-bold ${labelColor}`}>Password</label>
                         <div className="relative">
-                            <input type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} className={`mt-1 w-full p-3 rounded-md border focus:outline-none focus:ring-2 focus:ring-teal-500 ${inputBg}`} />
-                            <button onClick={() => setShowPassword(!showPassword)} className={`absolute inset-y-0 right-0 px-3 flex items-center ${theme === 'dark' ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-800'}`}>
+                            <input 
+                                type={showPassword ? 'text' : 'password'} 
+                                value={password} 
+                                disabled 
+                                className={`mt-1 w-full p-3 rounded-md border focus:outline-none focus:ring-2 focus:ring-teal-500 ${inputBg} ${theme === 'dark' ? 'opacity-70' : 'opacity-50'} cursor-not-allowed`} 
+                            />
+                            <button 
+                                onClick={() => setShowPassword(!showPassword)} 
+                                className={`absolute inset-y-0 right-0 px-3 flex items-center ${theme === 'dark' ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-800'}`}
+                            >
                                 {showPassword ? <EyeOffIcon /> : <EyeIcon />}
                             </button>
                         </div>
@@ -298,33 +408,87 @@ const ConfirmationModal = ({ config, onCancel, theme }) => {
 };
 
 const RenameModal = ({ config, onCancel, onSave, theme }) => {
-    if (!config) return null;
-    const { currentName, type } = config;
-    const [newName, setNewName] = useState(currentName);
+    const [newName, setNewName] = useState(config?.currentName || '');
     const modalBg = theme === 'dark' ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-200 text-gray-800';
     const inputBg = theme === 'dark' ? 'bg-gray-700 border-gray-600' : 'bg-gray-100 border-gray-300';
-    
+
+    if (!config) return null;
+
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-            <div className={`p-8 rounded-lg shadow-2xl w-full max-w-md border ${modalBg}`}>
-                <h2 className="text-xl font-bold mb-4">Rename {type}</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className={`p-8 rounded-lg shadow-2xl w-full max-w-lg border ${modalBg}`}>
+                <h2 className="text-2xl font-bold mb-6">Rename {config.type}</h2>
                 <input 
-                    type="text" 
                     value={newName} 
                     onChange={(e) => setNewName(e.target.value)} 
-                    maxLength="100"
-                    className={`w-full p-3 rounded-md border focus:outline-none focus:ring-2 focus:ring-teal-500 ${inputBg}`} 
+                    placeholder={`Enter new ${config.type.toLowerCase()} name`} 
+                    className={`w-full p-3 rounded-md border focus:outline-none focus:ring-2 focus:ring-teal-500 ${inputBg} mb-6`} 
                 />
-                <p className={`text-xs text-right mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>{newName.length}/100</p>
-                <div className="flex justify-between mt-6">
-                    <button onClick={onCancel} className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md">Cancel</button>
-                    <button onClick={() => onSave(newName)} className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-md">Save</button>
+                <div className="flex justify-between">
+                    <button onClick={onCancel} className={`${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'} font-bold py-2 px-4 rounded-md`}>Cancel</button>
+                    <button 
+                        onClick={() => onSave(config.type, config.id, newName)} 
+                        className={`bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-md ${!newName.trim() ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={!newName.trim()}
+                    >
+                        Save
+                    </button>
                 </div>
             </div>
         </div>
     );
 };
 
+const ProjectDetailsModal = ({ project, onClose, onSave, theme }) => {
+    const [editedProject, setEditedProject] = useState({ 
+        name: project.name, 
+        description: project.overview,
+        type: project.type,
+        industry: project.industry
+    });
+    const modalBg = theme === 'dark' ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-200 text-gray-800';
+    const inputBg = theme === 'dark' ? 'bg-gray-700 border-gray-600' : 'bg-gray-100 border-gray-300';
+    const labelColor = theme === 'dark' ? 'text-gray-300' : 'text-gray-600';
+
+    const handleChange = (e) => {
+        setEditedProject(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    };
+
+    const handleSave = () => {
+        onSave({
+            ...project,
+            name: editedProject.name,
+            overview: editedProject.description,
+            type: editedProject.type,
+            industry: editedProject.industry
+        });
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className={`p-8 rounded-lg shadow-2xl w-full max-w-lg border ${modalBg}`}>
+                <h2 className="text-2xl font-bold mb-6">Project Details</h2>
+                <ProjectFormFields 
+                    project={editedProject}
+                    handleChange={handleChange}
+                    theme={theme}
+                    inputBg={inputBg}
+                    labelColor={labelColor}
+                />
+                <div className="flex justify-between mt-6">
+                    <button onClick={onClose} className={`${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'} font-bold py-2 px-4 rounded-md`}>Cancel</button>
+                    <button 
+                        onClick={handleSave}
+                        className={`bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-md ${!editedProject.name ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={!editedProject.name}
+                    >
+                        Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 // --- Page Components ---
 const HomePage = ({ setPage, theme }) => (
@@ -565,67 +729,95 @@ const EnterNamePage = ({ setPage, onLogin, signUpData, theme }) => {
     );
 };
 
-const DashboardPage = ({ user, projects, chats, onNewProject, onSelectProject, onLogout, onContinueWithoutProject, onSelectChat, onProfileClick, onSettingsClick, theme, onRename, onDelete }) => (
-    <div className={`${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-800'} min-h-screen font-sans`}>
-        <header className={`p-4 flex justify-between items-center shadow-sm border-b ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-            <h1 className="text-2xl font-bold">StoryCrafter Pro</h1>
-            <ProfileDropdown username={user.name} onLogout={onLogout} onProfileClick={onProfileClick} onSettingsClick={onSettingsClick} theme={theme} />
-        </header>
-        <main className="p-8 max-w-7xl mx-auto">
-            <div className="flex justify-between items-center mb-8">
-                <h2 className="text-3xl font-bold">Dashboard</h2>
-                <div className="flex space-x-4">
-                    <button onClick={onContinueWithoutProject} className={`${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'} font-bold py-2 px-6 rounded-md`}>Continue without Project</button>
-                    <button onClick={onNewProject} className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-6 rounded-md flex items-center"><PlusIcon /> New Project</button>
-                </div>
-            </div>
+const DashboardPage = ({ user, projects, chats, onNewProject, onSelectProject, onLogout, onContinueWithoutProject, onSelectChat, onProfileClick, onSettingsClick, theme, onRename, onDelete }) => {
+    const [selectedProject, setSelectedProject] = useState(null);
 
-            {chats.length > 0 && (
-                <div className="mb-12">
-                    <h3 className="text-2xl font-bold mb-4">Recent Chats</h3>
-                    <div className={`rounded-lg border ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-                        <ul className={`divide-y ${theme === 'dark' ? 'divide-gray-700' : 'divide-gray-200'}`}>
-                           {chats.map(chat => (
-                                <li key={chat.id} onClick={() => onSelectChat(chat.id)} className={`p-4 cursor-pointer transition-colors flex items-center justify-between ${theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
-                                    <p className="flex items-center truncate">
-                                        <ChatIcon className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}/> <span className="truncate">{chat.title}</span>
-                                    </p>
-                                    <div className="flex items-center space-x-2">
-                                        <span className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>Yesterday</span>
-                                        <OptionsMenu theme={theme} options={[
-                                            { label: 'Rename', action: () => onRename('chat', chat.id, chat.title) },
-                                            { label: 'Delete Chat', action: () => onDelete('chat', chat.id), isDestructive: true }
-                                        ]} />
-                                    </div>
-                                </li>
-                           ))}
-                        </ul>
+    const handleUpdateProject = (updatedProject) => {
+        // Here you would typically make an API call to update the project
+        onRename('project', updatedProject.id, updatedProject.name);
+        setSelectedProject(null);
+    };
+
+    return (
+        <div className={`${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-800'} min-h-screen font-sans`}>
+            <header className={`p-4 flex justify-between items-center shadow-sm border-b ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+                <h1 className="text-2xl font-bold">StoryCrafter Pro</h1>
+                <ProfileDropdown username={user.name} onLogout={onLogout} onProfileClick={onProfileClick} onSettingsClick={onSettingsClick} theme={theme} />
+            </header>
+            <main className="p-8 max-w-7xl mx-auto">
+                <div className="flex justify-between items-center mb-8">
+                    <h2 className="text-3xl font-bold">Dashboard</h2>
+                    <div className="flex space-x-4">
+                        <button onClick={onContinueWithoutProject} className={`${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'} font-bold py-2 px-6 rounded-md`}>Continue without Project</button>
+                        <button onClick={onNewProject} className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-6 rounded-md flex items-center"><PlusIcon /> New Project</button>
                     </div>
                 </div>
-            )}
 
-            <div>
-                <h3 className="text-2xl font-bold mb-4">Your Projects</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {projects.map((p) => (
-                        <div key={p.id} onClick={() => onSelectProject(p)} className={`p-6 rounded-lg shadow-lg cursor-pointer transition-colors border relative ${theme === 'dark' ? 'bg-gray-800 border-gray-700 hover:bg-gray-700' : 'bg-white border-gray-200 hover:bg-gray-50'}`}>
-                            <div className="absolute top-4 right-4">
-                                <OptionsMenu theme={theme} options={[
-                                    { label: 'Rename', action: () => onRename('project', p.id, p.name) },
-                                    { label: 'Delete Project', action: () => onDelete('project', p.id), isDestructive: true }
-                                ]} />
-                            </div>
-                            <h3 className="text-xl font-bold mb-2 pr-8">{p.name}</h3>
-                            <p className={`text-sm mb-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>{p.overview.substring(0, 100)}...</p>
-                            <span className="text-xs bg-teal-500 text-white py-1 px-2 rounded-full">{p.type}</span>
+                {chats.length > 0 && (
+                    <div className="mb-12">
+                        <h3 className="text-2xl font-bold mb-4">Recent Chats</h3>
+                        <div className={`rounded-lg border ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+                            <ul className={`divide-y ${theme === 'dark' ? 'divide-gray-700' : 'divide-gray-200'}`}>
+                               {chats.map(chat => (
+                                    <li key={chat.id} onClick={() => onSelectChat(chat.id)} className={`h-10 p-2 cursor-pointer transition-colors flex items-center justify-between ${theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
+                                        <p className="flex items-center flex-grow min-w-0 h-full">
+                                            <ChatIcon className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} flex-shrink-0 mr-2 w-4 h-4`}/> 
+                                            <span className="whitespace-nowrap overflow-hidden text-ellipsis">{chat.title}</span>
+                                        </p>
+                                        <div className="flex items-center space-x-2 flex-shrink-0">
+                                            <OptionsMenu theme={theme} options={[
+                                                { label: 'Rename', icon: <RenameIcon />, action: () => onRename('chat', chat.id, chat.title) },
+                                                { label: 'Delete Chat', icon: <DeleteIcon />, action: () => onDelete('chat', chat.id), isDestructive: true }
+                                            ]} />
+                                        </div>
+                                    </li>
+                               ))}
+                            </ul>
                         </div>
-                    ))}
-                    {projects.length === 0 && <p className={`col-span-full ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>You haven't created any projects yet.</p>}
+                    </div>
+                )}
+
+                <div>
+                    <h3 className="text-2xl font-bold mb-4">Your Projects</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {projects.map((p) => (
+                            <div key={p.id} onClick={() => onSelectProject(p)} className={`p-6 rounded-lg shadow-lg cursor-pointer transition-colors border relative ${theme === 'dark' ? 'bg-gray-800 border-gray-700 hover:bg-gray-700' : 'bg-white border-gray-200 hover:bg-gray-50'}`}>
+                                <div className="absolute top-4 right-4">
+                                    <OptionsMenu theme={theme} options={[
+                                        { label: 'View Details', icon: <ViewIcon />, action: () => setSelectedProject(p) },
+                                        { label: 'Rename', icon: <EditIcon />, action: () => onRename('project', p.id, p.name) },
+                                        { label: 'Delete Project', icon: <DeleteIcon />, action: () => onDelete('project', p.id), isDestructive: true }
+                                    ]} />
+                                </div>
+                                <h3 className="text-xl font-bold mb-2 pr-8">{p.name}</h3>
+                                <p className={`text-sm mb-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                                    {p.overview.length > 40 ? `${p.overview.substring(0, 40)}...` : p.overview}
+                                </p>
+                                <span className="text-xs bg-teal-500 text-white py-1 px-2 rounded-full">{p.type}</span>
+                            </div>
+                        ))}
+                    </div>
                 </div>
-            </div>
-        </main>
-    </div>
-);
+            </main>
+            {selectedProject && (
+                <ProjectDetailsModal 
+                    project={selectedProject} 
+                    onClose={() => setSelectedProject(null)}
+                    onSave={handleUpdateProject}
+                    theme={theme}
+                />
+            )}
+        </div>
+    );
+};
+
+const formatSystemResponse = (text) => {
+    // Split the text into sections
+    const sections = text.split('\n').filter(line => line.trim() !== '');
+    
+    // Join sections with double line breaks
+    return sections.join('\n\n');
+};
 
 const ChatInterface = ({ user, project, chats, activeChatId, onLogout, onBackToDashboard, onNewChat, onSelectChat, onCreateProject, onProfileClick, onSettingsClick, theme, onSendMessage, onFeedback }) => {
     const [prompt, setPrompt] = useState('');
@@ -701,8 +893,15 @@ const ChatInterface = ({ user, project, chats, activeChatId, onLogout, onBackToD
                      <nav>
                         <ul className="space-y-1">
                             {chats.map(chat => (
-                                <li key={chat.id} onClick={() => onSelectChat(chat.id)} className={`flex items-center p-2 rounded-md cursor-pointer ${chat.id === activeChatId ? (theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200') : `${secondaryTextColor} hover:bg-gray-700 hover:text-white`}`}>
-                                    <ChatIcon /> <span className="truncate">{chat.title}</span>
+                                <li key={chat.id} onClick={() => onSelectChat(chat.id)} className={`h-10 flex items-center p-2 rounded-md cursor-pointer justify-between ${chat.id === activeChatId ? (theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200') : `${secondaryTextColor} hover:bg-gray-700 hover:text-white`}`}>
+                                    <div className="flex items-center min-w-0">
+                                        <ChatIcon className="flex-shrink-0 mr-2 w-4 h-4" /> 
+                                        <span className="whitespace-nowrap overflow-hidden text-ellipsis">{chat.title}</span>
+                                    </div>
+                                    <OptionsMenu theme={theme} options={[
+                                        { label: 'Rename', icon: <RenameIcon />, action: () => onRename('chat', chat.id, chat.title) },
+                                        { label: 'Delete Chat', icon: <DeleteIcon />, action: () => onDelete('chat', chat.id), isDestructive: true }
+                                    ]} />
                                 </li>
                             ))}
                         </ul>
@@ -715,7 +914,7 @@ const ChatInterface = ({ user, project, chats, activeChatId, onLogout, onBackToD
                     <div className="flex items-center">
                         <span className={`text-sm mr-2 ${secondaryTextColor}`}>Model:</span>
                         <select className={`border rounded-md py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 ${theme === 'dark' ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}`}>
-                            <option>Gemini Flash</option><option>Claude 3.5 Sonnet</option><option>GPT-4o</option>
+                            <option>Gemini Flash</option>
                         </select>
                     </div>
                     <ProfileDropdown username={user.name} onLogout={onLogout} onProfileClick={onProfileClick} onSettingsClick={onSettingsClick} theme={theme} />
@@ -724,31 +923,31 @@ const ChatInterface = ({ user, project, chats, activeChatId, onLogout, onBackToD
                 <div className="flex-1 p-6 overflow-y-auto">
                     <div className="max-w-4xl mx-auto">
                         {activeChat?.messages.map((msg, index) => (
-                          <div key={msg.id || index} className="w-full mb-6">
-                            <div className={`flex items-start ${msg.isUser ? 'justify-end' : 'justify-start'}`}>
-                                {!msg.isUser && <div className={`rounded-full p-2 mr-4 ${botMsgBg}`}><BotIcon className="text-teal-500"/></div>}
-                                <div className={`p-4 rounded-lg max-w-2xl ${msg.isUser ? 'bg-teal-600 text-white rounded-br-none' : `${botMsgBg} rounded-bl-none`}`}>
-                                    {msg.text}
+                            <div key={msg.id || index} className="w-full mb-6">
+                                <div className={`flex items-start ${msg.isUser ? 'justify-end' : 'justify-start'}`}>
+                                    {!msg.isUser && <div className={`rounded-full p-2 mr-4 ${botMsgBg}`}><BotIcon className="text-teal-500"/></div>}
+                                    <div className={`p-4 rounded-lg max-w-2xl ${msg.isUser ? 'bg-teal-600 text-white rounded-br-none' : `${botMsgBg} rounded-bl-none`}`}>
+                                        <div className="whitespace-pre-wrap">{msg.isUser ? msg.text : formatSystemResponse(msg.text)}</div>
+                                    </div>
+                                    {msg.isUser && <div className={`rounded-full p-2 ml-4 ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'}`}><UserIcon className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}/></div>}
                                 </div>
-                                {msg.isUser && <div className={`rounded-full p-2 ml-4 ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'}`}><UserIcon className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}/></div>}
+                                {!msg.isUser && index > 0 && (
+                                    <div className={`pl-16 pt-2 flex items-center space-x-4 ${secondaryTextColor}`}>
+                                        <button onClick={() => handleCopy(msg.text, msg.id)} className={`flex items-center hover:text-teal-500`}>
+                                            {copiedMessageId === msg.id ? (
+                                                <>
+                                                    <CheckIcon className="h-5 w-5 mr-1 text-green-500" />
+                                                    <span className="text-sm">Copied!</span>
+                                                </>
+                                            ) : (
+                                                <CopyIcon className="h-5 w-5" />
+                                            )}
+                                        </button>
+                                        <button onClick={() => onFeedback(activeChatId, msg.id, 'good')} className={`${msg.feedback === 'good' ? 'text-teal-500' : 'hover:text-teal-500'}`}><ThumbsUpIcon filled={msg.feedback === 'good'} /></button>
+                                        <button onClick={() => onFeedback(activeChatId, msg.id, 'bad')} className={`${msg.feedback === 'bad' ? 'text-red-500' : 'hover:text-red-500'}`}><ThumbsDownIcon filled={msg.feedback === 'bad'} /></button>
+                                    </div>
+                                )}
                             </div>
-                            {!msg.isUser && index > 0 && (
-                                <div className={`pl-16 pt-2 flex items-center space-x-4 ${secondaryTextColor}`}>
-                                    <button onClick={() => handleCopy(msg.text, msg.id)} className={`flex items-center hover:text-teal-500`}>
-                                        {copiedMessageId === msg.id ? (
-                                            <>
-                                                <CheckIcon className="h-5 w-5 mr-1 text-green-500" />
-                                                <span className="text-sm">Copied!</span>
-                                            </>
-                                        ) : (
-                                            <CopyIcon className="h-5 w-5" />
-                                        )}
-                                    </button>
-                                    <button onClick={() => onFeedback(activeChatId, msg.id, 'good')} className={`${msg.feedback === 'good' ? 'text-teal-500' : 'hover:text-teal-500'}`}><ThumbsUpIcon filled={msg.feedback === 'good'} /></button>
-                                    <button onClick={() => onFeedback(activeChatId, msg.id, 'bad')} className={`${msg.feedback === 'bad' ? 'text-red-500' : 'hover:text-red-500'}`}><ThumbsDownIcon filled={msg.feedback === 'bad'} /></button>
-                                </div>
-                            )}
-                          </div>
                         ))}
                         <div ref={chatEndRef} />
                     </div>

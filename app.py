@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, ForeignKey, Text
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, ForeignKey, Text, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session, relationship
 from passlib.context import CryptContext
@@ -12,6 +12,7 @@ import os
 import logging
 import google.generativeai as genai
 from dotenv import load_dotenv
+from typing import Optional
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -22,16 +23,65 @@ load_dotenv()
 
 # Database setup
 SQLALCHEMY_DATABASE_URL = "sqlite:///./storycrafter.db"
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+# Database Models
+class UserModel(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True)
+    name = Column(String)
+    hashed_password = Column(String)
+    projects = relationship("Project", back_populates="user")
+    chats = relationship("Chat", back_populates="user")
+
+class Project(Base):
+    __tablename__ = "projects"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True)
+    overview = Column(Text)
+    type = Column(String)
+    industry = Column(String)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = relationship("UserModel", back_populates="projects")
+    chats = relationship("Chat", back_populates="project")
+
+class Chat(Base):
+    __tablename__ = "chats"
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = relationship("UserModel", back_populates="chats")
+    project = relationship("Project", back_populates="chats")
+    messages = relationship("ChatMessage", back_populates="chat", order_by="ChatMessage.created_at")
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+    id = Column(Integer, primary_key=True, index=True)
+    chat_id = Column(Integer, ForeignKey("chats.id"))
+    user_id = Column(Integer, ForeignKey("users.id"))
+    message = Column(Text)
+    is_user = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("UserModel")
+    chat = relationship("Chat", back_populates="messages")
+
+# Create all tables
 try:
-    engine = create_engine(SQLALCHEMY_DATABASE_URL)
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    Base = declarative_base()
-    
-    # Create database tables
     Base.metadata.create_all(bind=engine)
-    logger.info("Database setup completed successfully")
+    logger.info("Database tables created successfully")
 except Exception as e:
-    logger.error(f"Error setting up database: {str(e)}")
+    logger.error(f"Error creating database tables: {str(e)}")
     raise
 
 # Security configuration
@@ -41,26 +91,6 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
-# Database Models
-class UserModel(Base):
-    __tablename__ = "users"
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True)
-    hashed_password = Column(String)
-    messages = relationship("ChatMessage", back_populates="user")
-
-class ChatMessage(Base):
-    __tablename__ = "chat_messages"
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    message = Column(Text)
-    is_user = Column(Boolean, default=True)
-    timestamp = Column(String, default=lambda: datetime.utcnow().isoformat())
-    user = relationship("UserModel", back_populates="messages")
-
-# Create database tables
-# Base.metadata.create_all(bind=engine) # This line is now handled in the try/except block above
 
 # Pydantic Models
 class UserBase(BaseModel):
@@ -88,9 +118,55 @@ class StoryRequest(BaseModel):
 class StoryResponse(BaseModel):
     story: str
 
-class ChatMessageCreate(BaseModel):
+class ProjectBase(BaseModel):
+    name: str
+    overview: str
+    type: str
+    industry: str
+
+class ProjectCreate(ProjectBase):
+    pass
+
+class ProjectResponse(ProjectBase):
+    id: int
+    user_id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class ChatBase(BaseModel):
+    title: str
+    project_id: Optional[int] = None
+
+class ChatCreate(ChatBase):
+    pass
+
+class ChatResponse(ChatBase):
+    id: int
+    user_id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class ChatMessageBase(BaseModel):
     message: str
     is_user: bool = True
+
+class ChatMessageCreate(ChatMessageBase):
+    chat_id: int
+
+class ChatMessageResponse(ChatMessageBase):
+    id: int
+    user_id: int
+    chat_id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
 
 # Security Functions
 def get_password_hash(password: str) -> str:
@@ -248,13 +324,6 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
     )
     return {"access_token": access_token, "token_type": "bearer", "user_id": user.id}
 
-@app.get("/chats/{user_id}")
-async def get_user_chats(user_id: int, current_user: UserModel = Depends(get_current_user), db: Session = Depends(get_db)):
-    if current_user.id != user_id:
-        raise HTTPException(status_code=403, detail="Not authorized to access these chats")
-    messages = db.query(ChatMessage).filter(ChatMessage.user_id == user_id).all()
-    return messages
-
 @app.post("/api/generate-story", response_model=StoryResponse)
 async def generate_story(
     request: StoryRequest,
@@ -320,6 +389,129 @@ async def generate_story(
             status_code=500,
             detail=f"Unexpected error: {str(e)}"
         )
+
+# Project endpoints
+@app.post("/projects/", response_model=ProjectResponse)
+async def create_project(
+    project: ProjectCreate,
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    db_project = Project(**project.dict(), user_id=current_user.id)
+    db.add(db_project)
+    db.commit()
+    db.refresh(db_project)
+    return db_project
+
+@app.get("/projects/", response_model=list[ProjectResponse])
+async def get_user_projects(
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return db.query(Project).filter(Project.user_id == current_user.id).all()
+
+@app.get("/projects/{project_id}", response_model=ProjectResponse)
+async def get_project(
+    project_id: int,
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    project = db.query(Project).filter(
+        Project.id == project_id,
+        Project.user_id == current_user.id
+    ).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return project
+
+# Chat endpoints
+@app.post("/chats/", response_model=ChatResponse)
+async def create_chat(
+    chat: ChatCreate,
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # If project_id is provided, verify it belongs to the user
+    if chat.project_id:
+        project = db.query(Project).filter(
+            Project.id == chat.project_id,
+            Project.user_id == current_user.id
+        ).first()
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+    db_chat = Chat(**chat.dict(), user_id=current_user.id)
+    db.add(db_chat)
+    db.commit()
+    db.refresh(db_chat)
+    return db_chat
+
+@app.get("/chats/", response_model=list[ChatResponse])
+async def get_user_chats(
+    project_id: Optional[int] = None,
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    query = db.query(Chat).filter(Chat.user_id == current_user.id)
+    if project_id is not None:
+        query = query.filter(Chat.project_id == project_id)
+    return query.all()
+
+@app.get("/chats/{chat_id}", response_model=ChatResponse)
+async def get_chat(
+    chat_id: int,
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    chat = db.query(Chat).filter(
+        Chat.id == chat_id,
+        Chat.user_id == current_user.id
+    ).first()
+    if not chat:
+        raise HTTPException(status_code=404, detail="Chat not found")
+    return chat
+
+@app.post("/chats/{chat_id}/messages/", response_model=ChatMessageResponse)
+async def create_chat_message(
+    chat_id: int,
+    message: ChatMessageCreate,
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Verify chat belongs to user
+    chat = db.query(Chat).filter(
+        Chat.id == chat_id,
+        Chat.user_id == current_user.id
+    ).first()
+    if not chat:
+        raise HTTPException(status_code=404, detail="Chat not found")
+
+    db_message = ChatMessage(
+        chat_id=chat_id,
+        user_id=current_user.id,
+        message=message.message,
+        is_user=message.is_user
+    )
+    db.add(db_message)
+    db.commit()
+    db.refresh(db_message)
+    return db_message
+
+@app.get("/chats/{chat_id}/messages/", response_model=list[ChatMessageResponse])
+async def get_chat_messages(
+    chat_id: int,
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Verify chat belongs to user
+    chat = db.query(Chat).filter(
+        Chat.id == chat_id,
+        Chat.user_id == current_user.id
+    ).first()
+    if not chat:
+        raise HTTPException(status_code=404, detail="Chat not found")
+
+    return db.query(ChatMessage).filter(ChatMessage.chat_id == chat_id).order_by(ChatMessage.created_at).all()
 
 if __name__ == "__main__":
     import uvicorn
