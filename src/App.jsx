@@ -766,7 +766,6 @@ const DashboardPage = ({ user, projects, chats, onNewProject, onSelectProject, o
                                         </p>
                                         <div className="flex items-center space-x-2 flex-shrink-0">
                                             <OptionsMenu theme={theme} options={[
-                                                { label: 'Rename', icon: <RenameIcon />, action: () => onRename('chat', chat.id, chat.title) },
                                                 { label: 'Delete Chat', icon: <DeleteIcon />, action: () => onDelete('chat', chat.id), isDestructive: true }
                                             ]} />
                                         </div>
@@ -819,7 +818,7 @@ const formatSystemResponse = (text) => {
     return sections.join('\n\n');
 };
 
-const ChatInterface = ({ user, project, chats, activeChatId, onLogout, onBackToDashboard, onNewChat, onSelectChat, onCreateProject, onProfileClick, onSettingsClick, theme, onSendMessage, onFeedback }) => {
+const ChatInterface = ({ user, project, chats, activeChatId, onLogout, onBackToDashboard, onNewChat, onSelectChat, onCreateProject, onProfileClick, onSettingsClick, theme, onSendMessage, onFeedback, onDelete }) => {
     const [prompt, setPrompt] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [copiedMessageId, setCopiedMessageId] = useState(null);
@@ -899,7 +898,6 @@ const ChatInterface = ({ user, project, chats, activeChatId, onLogout, onBackToD
                                         <span className="whitespace-nowrap overflow-hidden text-ellipsis">{chat.title}</span>
                                     </div>
                                     <OptionsMenu theme={theme} options={[
-                                        { label: 'Rename', icon: <RenameIcon />, action: () => onRename('chat', chat.id, chat.title) },
                                         { label: 'Delete Chat', icon: <DeleteIcon />, action: () => onDelete('chat', chat.id), isDestructive: true }
                                     ]} />
                                 </li>
@@ -1312,7 +1310,7 @@ export default function App() {
             case 'signup': return <SignUpPage setPage={setPage} setSignUpData={setSignUpData} theme={theme} />;
             case 'enterName': return <EnterNamePage setPage={setPage} onLogin={handleLogin} signUpData={signUpData} theme={theme} />;
             case 'dashboard': return <DashboardPage user={user} projects={projects} chats={chats.filter(c => !c.projectId)} onNewProject={() => setShowNewProjectModal(true)} onSelectProject={handleSelectProject} onLogout={handleLogout} onContinueWithoutProject={handleContinueWithoutProject} onSelectChat={handleSelectChat} onProfileClick={() => setShowProfileModal(true)} onSettingsClick={() => setShowSettingsModal(true)} theme={theme} onRename={handleRename} onDelete={handleDelete} />;
-            case 'chat': return <ChatInterface user={user} project={activeProject} chats={activeProject ? chats.filter(c => c.projectId === activeProject.id) : chats.filter(c => !c.projectId)} activeChatId={activeChatId} onLogout={handleLogout} onBackToDashboard={() => setPage('dashboard')} onNewChat={() => createNewChat(!!activeProject)} onSelectChat={(id) => setActiveChatId(id)} onCreateProject={() => setShowNewProjectModal(true)} onProfileClick={() => setShowProfileModal(true)} onSettingsClick={() => setShowSettingsModal(true)} theme={theme} onSendMessage={handleSendMessage} onFeedback={handleFeedback} />;
+            case 'chat': return <ChatInterface user={user} project={activeProject} chats={activeProject ? chats.filter(c => c.projectId === activeProject.id) : chats.filter(c => !c.projectId)} activeChatId={activeChatId} onLogout={handleLogout} onBackToDashboard={() => setPage('dashboard')} onNewChat={() => createNewChat(!!activeProject)} onSelectChat={(id) => setActiveChatId(id)} onCreateProject={() => setShowNewProjectModal(true)} onProfileClick={() => setShowProfileModal(true)} onSettingsClick={() => setShowSettingsModal(true)} theme={theme} onSendMessage={handleSendMessage} onFeedback={handleFeedback} onDelete={handleDelete} />;
             case 'home':
             default: return <HomePage setPage={setPage} theme={theme} />;
         }
