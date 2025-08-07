@@ -988,7 +988,7 @@ export default function App() {
             // For now, we'll just check if the token exists
             const fetchUserChats = async () => {
                 try {
-                    const response = await fetch(`http://127.0.0.1:8000/chats/${user.id}`, {
+                    const response = await fetch('http://127.0.0.1:8000/chats/', {
                         headers: {
                             'Authorization': `Bearer ${token}`
                         }
@@ -996,7 +996,34 @@ export default function App() {
                     if (response.ok) {
                         const chatData = await response.json();
                         // Transform chat data into the format expected by the frontend
-                        const transformedChats = transformChatData(chatData);
+                        const transformedChats = await Promise.all(chatData.map(async (chat) => {
+                            // Fetch messages for each chat
+                            const messagesResponse = await fetch(`http://127.0.0.1:8000/chats/${chat.id}/messages/`, {
+                                headers: {
+                                    'Authorization': `Bearer ${token}`
+                                }
+                            });
+                            if (messagesResponse.ok) {
+                                const messages = await messagesResponse.json();
+                                return {
+                                    id: chat.id,
+                                    title: chat.title,
+                                    projectId: chat.project_id,
+                                    messages: messages.map(msg => ({
+                                        id: msg.id,
+                                        text: msg.message,
+                                        isUser: msg.is_user,
+                                        timestamp: msg.created_at
+                                    }))
+                                };
+                            }
+                            return {
+                                id: chat.id,
+                                title: chat.title,
+                                projectId: chat.project_id,
+                                messages: []
+                            };
+                        }));
                         setChats(transformedChats);
                     }
                 } catch (error) {
@@ -1009,28 +1036,6 @@ export default function App() {
             }
         }
     }, [user]);
-
-    const transformChatData = (chatMessages) => {
-        // Group messages by conversation
-        const conversations = {};
-        chatMessages.forEach(msg => {
-            const conversationId = msg.conversation_id || 'default';
-            if (!conversations[conversationId]) {
-                conversations[conversationId] = {
-                    id: conversationId,
-                    title: `Chat ${Object.keys(conversations).length + 1}`,
-                    messages: []
-                };
-            }
-            conversations[conversationId].messages.push({
-                id: msg.id,
-                text: msg.message,
-                isUser: msg.is_user,
-                timestamp: msg.timestamp
-            });
-        });
-        return Object.values(conversations);
-    };
 
     const handleFeedback = (chatId, messageId, feedbackType) => {
         setChats(chats.map(chat => {
@@ -1080,14 +1085,53 @@ export default function App() {
             }
 
             const data = await response.json();
-            const botMessage = { id: Date.now() + 1, text: data.story, isUser: false, feedback: null };
-            updatedChats = updatedChats.map(chat => {
-                if (chat.id === chatId) {
-                    return { ...chat, messages: [...chat.messages, botMessage] };
+            
+            // Since the backend creates a new chat automatically, we need to refresh the chats
+            // to get the new chat with the messages
+            const chatsResponse = await fetch('http://127.0.0.1:8000/chats/', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
                 }
-                return chat;
             });
-            setChats(updatedChats);
+            
+            if (chatsResponse.ok) {
+                const chatData = await chatsResponse.json();
+                const transformedChats = await Promise.all(chatData.map(async (chat) => {
+                    // Fetch messages for each chat
+                    const messagesResponse = await fetch(`http://127.0.0.1:8000/chats/${chat.id}/messages/`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    if (messagesResponse.ok) {
+                        const messages = await messagesResponse.json();
+                        return {
+                            id: chat.id,
+                            title: chat.title,
+                            projectId: chat.project_id,
+                            messages: messages.map(msg => ({
+                                id: msg.id,
+                                text: msg.message,
+                                isUser: msg.is_user,
+                                timestamp: msg.created_at
+                            }))
+                        };
+                    }
+                    return {
+                        id: chat.id,
+                        title: chat.title,
+                        projectId: chat.project_id,
+                        messages: []
+                    };
+                }));
+                setChats(transformedChats);
+                
+                // Set the active chat to the newest one (which should be the one with the new messages)
+                if (transformedChats.length > 0) {
+                    const newestChat = transformedChats[transformedChats.length - 1];
+                    setActiveChatId(newestChat.id);
+                }
+            }
         } catch (error) {
             console.error('Error:', error);
             const errorMessage = { 
@@ -1106,16 +1150,43 @@ export default function App() {
         }
     };
 
-    const createNewChat = (isProjectChat = false) => {
-        const newChat = {
-            id: Date.now(),
-            title: 'New Chat ' + (chats.length + 1),
-            messages: [{ id: Date.now() + 1, text: `Hello! Ready to craft some user stories. What's the requirement?`, isUser: false, feedback: null }],
-            projectId: isProjectChat && activeProject ? activeProject.id : null,
-        };
-        setChats(prev => [...prev, newChat]);
-        setActiveChatId(newChat.id);
-        setPage('chat');
+    const createNewChat = async (isProjectChat = false) => {
+        try {
+            const token = localStorage.getItem('token');
+            const chatData = {
+                title: 'New Chat ' + (chats.length + 1),
+                project_id: isProjectChat && activeProject ? activeProject.id : null
+            };
+            
+            const response = await fetch('http://127.0.0.1:8000/chats/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(chatData)
+            });
+            
+            if (response.ok) {
+                const newChat = await response.json();
+                const chatWithMessages = {
+                    id: newChat.id,
+                    title: newChat.title,
+                    projectId: newChat.project_id,
+                    messages: [{ 
+                        id: Date.now() + 1, 
+                        text: `Hello! Ready to craft some user stories. What's the requirement?`, 
+                        isUser: false, 
+                        feedback: null 
+                    }]
+                };
+                setChats(prev => [...prev, chatWithMessages]);
+                setActiveChatId(newChat.id);
+                setPage('chat');
+            }
+        } catch (error) {
+            console.error('Error creating new chat:', error);
+        }
     };
 
     const handleLogin = (userData) => {
@@ -1132,7 +1203,7 @@ export default function App() {
         setPage('home');
     };
 
-    const handleSaveProject = (projectData) => {
+    const handleSaveProject = async (projectData) => {
         const newProject = { ...projectData, id: Date.now() };
         setProjects(prev => [...prev, newProject]);
         setShowNewProjectModal(false);
@@ -1142,23 +1213,23 @@ export default function App() {
         if (currentChat && !currentChat.projectId) {
             setChats(chats.map(c => c.id === activeChatId ? { ...c, projectId: newProject.id, title: `${newProject.name} - Chat 1` } : c));
         } else {
-            createNewChat(true);
+            await createNewChat(true);
         }
         setPage('chat');
     };
-    const handleSelectProject = (project) => {
+    const handleSelectProject = async (project) => {
         setActiveProject(project);
         const projectChat = chats.find(c => c.projectId === project.id);
         if (projectChat) {
             setActiveChatId(projectChat.id);
         } else {
-            createNewChat(true);
+            await createNewChat(true);
         }
         setPage('chat');
     };
-    const handleContinueWithoutProject = () => {
+    const handleContinueWithoutProject = async () => {
         setActiveProject(null);
-        createNewChat(false);
+        await createNewChat(false);
     };
     const handleSelectChat = (chatId) => {
         const selectedChat = chats.find(c => c.id === chatId);

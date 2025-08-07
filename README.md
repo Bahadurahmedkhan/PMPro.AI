@@ -1,6 +1,28 @@
-# API Testing Framework
+# StoryCrafter
 
 A comprehensive Python framework for testing REST APIs with support for various HTTP methods, authentication, and detailed reporting.
+
+## UI Screenshots
+
+### Authentication Pages
+![Login Page Dark Theme](images/Login%20Page%20Dark%20theme.PNG)
+![Login Page Light Theme](images/Login%20Page%20Light%20theme.PNG)
+![Sign Up Page](images/Sign%20Up%20Page.PNG)
+
+### Dashboard & Interface
+![ChatGPT Dashboard Dark Theme](images/Chatgpt%20Dashboard%20Dark%20Theme.PNG)
+![ChatGPT Interface Dark Theme](images/Chatgpt%20Interface%20Dark%20Theme.PNG)
+![ChatGPT Interface Light Theme](images/Chatgpt%20Interface%20Light%20Theme.PNG)
+
+### Project Management
+![Create Project Form](images/Create%20Project%20Form.PNG)
+![Get Started Page Dark Theme](images/Get%20Started%20Page%20Dark%20Theme.PNG)
+![Get Started Page Light Theme](images/Get%20Started%20Page%20Light%20Theme.PNG)
+
+### User Profile & Settings
+![Profile View](images/Profile%20View.PNG)
+![Profile Menu](images/Profile%20menu.PNG)
+![Settings](images/Setting.PNG)
 
 ## Features
 

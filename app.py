@@ -335,8 +335,20 @@ async def generate_story(
     """
     logger.info(f"Generating story for prompt: {request.prompt}")
     try:
+        # Create a new chat if it doesn't exist
+        # For now, we'll create a chat with a generic title
+        chat_title = f"Chat {datetime.utcnow().strftime('%Y-%m-%d %H:%M')}"
+        new_chat = Chat(
+            title=chat_title,
+            user_id=current_user.id,
+            project_id=None  # We can add project_id later if needed
+        )
+        db.add(new_chat)
+        db.flush()  # This gets us the chat ID without committing
+        
         # Save user's prompt
         user_message = ChatMessage(
+            chat_id=new_chat.id,
             user_id=current_user.id,
             message=request.prompt,
             is_user=True
@@ -362,6 +374,7 @@ async def generate_story(
             
             # Save bot's response
             bot_message = ChatMessage(
+                chat_id=new_chat.id,
                 user_id=current_user.id,
                 message=response.text,
                 is_user=False
