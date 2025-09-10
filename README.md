@@ -43,7 +43,7 @@ pip install -r requirements.txt
 ```
 
 ### 3) Environment variables
-Create a `.env` file in the project root:
+Create a `.env` file in the project root (this file is already git-ignored). You can also create a commit-safe `env.sample` template and copy it to `.env` locally.
 ```bash
 GEMINI_API_KEY=your_google_gemini_api_key
 SECRET_KEY=change_me_for_production

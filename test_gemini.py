@@ -10,7 +10,9 @@ def test_gemini():
         print("Testing Gemini API connection...")
         
         # Get API key
-        api_key = os.getenv("GEMINI_API_KEY", "AIzaSyCq1mK98zrOc3PUAu06CLXtkyjAHMQhlJU")
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise RuntimeError("GEMINI_API_KEY is not set. Provide it via environment or .env file.")
         print(f"Using API key: {api_key[:10]}...")
         
         # Configure Gemini
