@@ -491,13 +491,13 @@ const ProjectDetailsModal = ({ project, onClose, onSave, theme }) => {
 };
 
 // --- Page Components ---
-const HomePage = ({ setPage, theme }) => (
+const HomePage = ({ setPage, theme, onGetStarted }) => (
     <div className={`${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-800'} flex items-center justify-center h-screen font-sans text-center`}>
         <div className="p-8">
             <BotIcon className="h-24 w-24 mx-auto text-teal-500 mb-4" />
             <h1 className="text-5xl font-bold mb-2">Welcome to StoryCrafter Pro</h1>
             <p className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} text-xl mb-8`}>The professional's choice for crafting perfect user stories.</p>
-            <button onClick={() => setPage('login')} className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-8 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 text-lg">Get Started</button>
+            <button onClick={onGetStarted} className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-8 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 text-lg">Get Started</button>
         </div>
     </div>
 );
@@ -521,53 +521,13 @@ const LoginPage = ({ setPage, onLogin, theme }) => {
     const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
     const handleLogin = async () => {
-        let newErrors = { email: '', password: '' };
-        let isValid = true;
-
+        // Guest mode: bypass authentication entirely
         if (!email || !validateEmail(email)) {
-            newErrors.email = 'Please enter a valid email address.';
-            isValid = false;
-        }
-        
-        if (!password) {
-            newErrors.password = 'Password is required.';
-            isValid = false;
-        }
-
-        if (!isValid) {
-            setErrors(newErrors);
+            setErrors({ email: 'Please enter a valid email address.', password: '' });
             return;
         }
-
-        try {
-            // First get the token
-            const formData = new URLSearchParams();
-            formData.append('username', email);
-            formData.append('password', password);
-
-            const tokenResponse = await fetch('http://127.0.0.1:8000/token', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: formData
-            });
-
-            if (!tokenResponse.ok) {
-                setErrors({ email: 'Invalid email or password.', password: ' ' });
-                return;
-            }
-
-            const tokenData = await tokenResponse.json();
-            localStorage.setItem('token', tokenData.access_token);
-            
-            // Login successful
-            onLogin({ name: email.split('@')[0], email: email, id: tokenData.user_id });
-            setPage('dashboard');
-        } catch (error) {
-            console.error('Login error:', error);
-            setErrors({ email: 'An error occurred during login.', password: ' ' });
-        }
+        onLogin({ name: email.split('@')[0] || 'Guest', email: email || 'guest@example.com', id: 'guest' });
+        setPage('dashboard');
     };
     const containerBg = theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200';
     const inputBg = theme === 'dark' ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300';
@@ -610,77 +570,14 @@ const SignUpPage = ({ setPage, setSignUpData, theme }) => {
     const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
     const handleSubmit = async () => {
+        // Guest mode: basic validation then proceed locally
         let newErrors = { email: '', password: '' };
         let isValid = true;
-
-        if (!email || !validateEmail(email)) {
-            newErrors.email = 'Please enter a valid email address.';
-            isValid = false;
-        }
-        
-        if (!password || password.length < 8) {
-            newErrors.password = 'Password must be at least 8 characters long.';
-            isValid = false;
-        }
-
-        if (!isValid) {
-            setErrors(newErrors);
-            return;
-        }
-
-        try {
-            const response = await fetch('http://127.0.0.1:8000/signup', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                },
-                body: JSON.stringify({ email, password }),
-                credentials: 'include'
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                if (data.detail === "Email already registered") {
-                    setErrors({ email: 'Email is already registered.', password: '' });
-                } else {
-                    console.error('Signup error:', data);
-                    setErrors({ email: data.detail || 'An error occurred during signup.', password: '' });
-                }
-                return;
-            }
-
-            // If signup successful, proceed with login
-            const formData = new URLSearchParams();
-            formData.append('username', email);
-            formData.append('password', password);
-
-            const tokenResponse = await fetch('http://127.0.0.1:8000/token', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'Accept': 'application/json',
-                },
-                body: formData,
-                credentials: 'include'
-            });
-
-            if (!tokenResponse.ok) {
-                const tokenData = await tokenResponse.json();
-                setErrors({ email: tokenData.detail || 'Error during login after signup.', password: '' });
-                return;
-            }
-
-            const tokenData = await tokenResponse.json();
-            localStorage.setItem('token', tokenData.access_token);
-            
-            setSignUpData({ email, password });
-            setPage('enterName');
-        } catch (error) {
-            console.error('Signup/login error:', error);
-            setErrors({ email: 'Network error or server is unavailable.', password: '' });
-        }
+        if (!email || !validateEmail(email)) { newErrors.email = 'Please enter a valid email address.'; isValid = false; }
+        if (!password || password.length < 4) { newErrors.password = 'Password must be at least 4 characters.'; isValid = false; }
+        if (!isValid) { setErrors(newErrors); return; }
+        setSignUpData({ email, password });
+        setPage('enterName');
     };
 
     return (
@@ -713,9 +610,9 @@ const EnterNamePage = ({ setPage, onLogin, signUpData, theme }) => {
     const textColor = theme === 'dark' ? 'text-white' : 'text-gray-800';
 
     const handleNameSubmit = () => {
-        if (name.trim()) { 
-            onLogin({ name: name.trim(), email: signUpData.email }); 
-            setPage('dashboard'); 
+        if (name.trim()) {
+            onLogin({ name: name.trim(), email: signUpData?.email || 'guest@example.com', id: 'guest' });
+            setPage('dashboard');
         }
     };
     return (
@@ -818,9 +715,55 @@ const formatSystemResponse = (text) => {
     return sections.join('\n\n');
 };
 
+const StructuredAiResponse = ({ text, theme }) => {
+    let data = null;
+    try {
+        data = typeof text === 'string' ? JSON.parse(text) : text;
+    } catch (e) {
+        data = null;
+    }
+
+    if (!data || (typeof data !== 'object')) {
+        return <div className="whitespace-pre-wrap">{formatSystemResponse(text)}</div>;
+    }
+
+    const cardBg = theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200';
+    const titleColor = theme === 'dark' ? 'text-gray-200' : 'text-gray-800';
+    const bodyColor = theme === 'dark' ? 'text-gray-300' : 'text-gray-700';
+
+    const { description, story, test_cases } = data;
+
+    return (
+        <div className="space-y-4">
+            {description ? (
+                <div className={`p-4 rounded-lg border ${cardBg}`}>
+                    <h4 className={`font-bold mb-2 ${titleColor}`}>Feature Description</h4>
+                    <div className={`whitespace-pre-wrap ${bodyColor}`}>{description}</div>
+                </div>
+            ) : null}
+            {story ? (
+                <div className={`p-4 rounded-lg border ${cardBg}`}>
+                    <h4 className={`font-bold mb-2 ${titleColor}`}>User Story</h4>
+                    <div className={`whitespace-pre-wrap ${bodyColor}`}>{story}</div>
+                </div>
+            ) : null}
+            {test_cases ? (
+                <div className={`p-4 rounded-lg border ${cardBg}`}>
+                    <h4 className={`font-bold mb-2 ${titleColor}`}>Test Cases</h4>
+                    <div className={`whitespace-pre-wrap ${bodyColor}`}>{test_cases}</div>
+                </div>
+            ) : null}
+            {!description && !story && !test_cases ? (
+                <div className="whitespace-pre-wrap">{formatSystemResponse(text)}</div>
+            ) : null}
+        </div>
+    );
+};
+
 const ChatInterface = ({ user, project, chats, activeChatId, onLogout, onBackToDashboard, onNewChat, onSelectChat, onCreateProject, onProfileClick, onSettingsClick, theme, onSendMessage, onFeedback, onDelete }) => {
     const [prompt, setPrompt] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [generationMode, setGenerationMode] = useState('all');
     const [copiedMessageId, setCopiedMessageId] = useState(null);
     const chatEndRef = useRef(null);
     const activeChat = chats.find(c => c.id === activeChatId);
@@ -847,7 +790,7 @@ const ChatInterface = ({ user, project, chats, activeChatId, onLogout, onBackToD
     const handleLocalSendMessage = () => {
         if (!prompt.trim() || isLoading) return;
         
-        onSendMessage(activeChatId, prompt);
+        onSendMessage(activeChatId, prompt, generationMode);
 
         setPrompt('');
         setIsLoading(true);
@@ -925,7 +868,11 @@ const ChatInterface = ({ user, project, chats, activeChatId, onLogout, onBackToD
                                 <div className={`flex items-start ${msg.isUser ? 'justify-end' : 'justify-start'}`}>
                                     {!msg.isUser && <div className={`rounded-full p-2 mr-4 ${botMsgBg}`}><BotIcon className="text-teal-500"/></div>}
                                     <div className={`p-4 rounded-lg max-w-2xl ${msg.isUser ? 'bg-teal-600 text-white rounded-br-none' : `${botMsgBg} rounded-bl-none`}`}>
-                                        <div className="whitespace-pre-wrap">{msg.isUser ? msg.text : formatSystemResponse(msg.text)}</div>
+                                        {msg.isUser ? (
+                                            <div className="whitespace-pre-wrap">{msg.text}</div>
+                                        ) : (
+                                            <StructuredAiResponse text={msg.text} theme={theme} />
+                                        )}
                                     </div>
                                     {msg.isUser && <div className={`rounded-full p-2 ml-4 ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'}`}><UserIcon className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}/></div>}
                                 </div>
@@ -952,9 +899,15 @@ const ChatInterface = ({ user, project, chats, activeChatId, onLogout, onBackToD
                 </div>
 
                 <div className={`p-6 border-t ${borderColor}`}>
-                    <div className="max-w-4xl mx-auto relative">
-                        <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleLocalSendMessage()} placeholder="Enter a product requirement..." className={`w-full p-4 pr-16 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none ${inputBg}`} rows="1" disabled={isLoading} />
-                        <button onClick={handleLocalSendMessage} disabled={isLoading || !prompt.trim()} className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-teal-600 text-white rounded-full hover:bg-teal-700 disabled:bg-gray-500 transition-colors"><SendIcon /></button>
+                    <div className="max-w-4xl mx-auto relative flex items-center space-x-3">
+                        <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleLocalSendMessage()} placeholder="Enter a product requirement..." className={`flex-1 p-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none ${inputBg}`} rows="1" disabled={isLoading} />
+                        <select value={generationMode} onChange={(e) => setGenerationMode(e.target.value)} className={`h-[44px] px-3 rounded-md border focus:outline-none focus:ring-2 focus:ring-teal-500 ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-300 text-gray-800'}`} disabled={isLoading}>
+                            <option value="all">All Artifacts</option>
+                            <option value="description">Feature Description Only</option>
+                            <option value="story">User Story Only</option>
+                            <option value="test_cases">Test Cases Only</option>
+                        </select>
+                        <button onClick={handleLocalSendMessage} disabled={isLoading || !prompt.trim()} className="p-2 bg-teal-600 text-white rounded-full hover:bg-teal-700 disabled:bg-gray-500 transition-colors"><SendIcon /></button>
                     </div>
                 </div>
             </main>
@@ -979,61 +932,42 @@ export default function App() {
     const [theme, setTheme] = useState('dark'); // 'light' or 'dark'
 
     useEffect(() => {
-        // Check for stored token and fetch user data on app load
-        const token = localStorage.getItem('token');
-        if (token) {
-            // TODO: Add endpoint to verify token and get user data
-            // For now, we'll just check if the token exists
-            const fetchUserChats = async () => {
-                try {
-                    const response = await fetch('http://127.0.0.1:8000/chats/', {
-                        headers: {
-                            'Authorization': `Bearer ${token}`
-                        }
-                    });
-                    if (response.ok) {
-                        const chatData = await response.json();
-                        // Transform chat data into the format expected by the frontend
-                        const transformedChats = await Promise.all(chatData.map(async (chat) => {
-                            // Fetch messages for each chat
-                            const messagesResponse = await fetch(`http://127.0.0.1:8000/chats/${chat.id}/messages/`, {
-                                headers: {
-                                    'Authorization': `Bearer ${token}`
-                                }
-                            });
-                            if (messagesResponse.ok) {
-                                const messages = await messagesResponse.json();
-                                return {
-                                    id: chat.id,
-                                    title: chat.title,
-                                    projectId: chat.project_id,
-                                    messages: messages.map(msg => ({
-                                        id: msg.id,
-                                        text: msg.message,
-                                        isUser: msg.is_user,
-                                        timestamp: msg.created_at
-                                    }))
-                                };
-                            }
+        const fetchUserChats = async () => {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/chats/');
+                if (response.ok) {
+                    const chatData = await response.json();
+                    const transformedChats = await Promise.all(chatData.map(async (chat) => {
+                        const messagesResponse = await fetch(`http://127.0.0.1:8000/chats/${chat.id}/messages/`);
+                        if (messagesResponse.ok) {
+                            const messages = await messagesResponse.json();
                             return {
                                 id: chat.id,
                                 title: chat.title,
                                 projectId: chat.project_id,
-                                messages: []
+                                messages: messages.map(msg => ({
+                                    id: msg.id,
+                                    text: msg.message,
+                                    isUser: msg.is_user,
+                                    timestamp: msg.created_at
+                                }))
                             };
-                        }));
-                        setChats(transformedChats);
-                    }
-                } catch (error) {
-                    console.error('Error fetching chats:', error);
+                        }
+                        return {
+                            id: chat.id,
+                            title: chat.title,
+                            projectId: chat.project_id,
+                            messages: []
+                        };
+                    }));
+                    setChats(transformedChats);
                 }
-            };
-
-            if (user) {
-                fetchUserChats();
+            } catch (error) {
+                console.error('Error fetching chats:', error);
             }
-        }
-    }, [user]);
+        };
+        fetchUserChats();
+    }, []);
 
     const handleFeedback = (chatId, messageId, feedbackType) => {
         setChats(chats.map(chat => {
@@ -1052,7 +986,7 @@ export default function App() {
         }));
     };
 
-    const handleSendMessage = async (chatId, prompt) => {
+    const handleSendMessage = async (chatId, prompt, mode = 'all') => {
         const userMessage = { id: Date.now(), text: prompt, isUser: true };
         let updatedChats = chats.map(chat => {
             if (chat.id === chatId) {
@@ -1063,44 +997,32 @@ export default function App() {
         setChats(updatedChats);
 
         try {
-            const token = localStorage.getItem('token');
             const response = await fetch('http://127.0.0.1:8000/api/generate-story', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ prompt }),
+                body: JSON.stringify({ prompt, chat_id: chatId, mode }),
             });
 
             if (!response.ok) {
-                if (response.status === 401) {
-                    // Token expired or invalid
-                    handleLogout();
-                    return;
-                }
-                throw new Error('Failed to generate story');
+                let errMsg = 'Failed to generate story';
+                try { const errJson = await response.json(); errMsg = errJson.detail || errMsg; } catch {}
+                alert(errMsg);
+                return;
             }
 
             const data = await response.json();
             
             // Since the backend creates a new chat automatically, we need to refresh the chats
             // to get the new chat with the messages
-            const chatsResponse = await fetch('http://127.0.0.1:8000/chats/', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+            const chatsResponse = await fetch('http://127.0.0.1:8000/chats/');
             
             if (chatsResponse.ok) {
                 const chatData = await chatsResponse.json();
                 const transformedChats = await Promise.all(chatData.map(async (chat) => {
                     // Fetch messages for each chat
-                    const messagesResponse = await fetch(`http://127.0.0.1:8000/chats/${chat.id}/messages/`, {
-                        headers: {
-                            'Authorization': `Bearer ${token}`
-                        }
-                    });
+                    const messagesResponse = await fetch(`http://127.0.0.1:8000/chats/${chat.id}/messages/`);
                     if (messagesResponse.ok) {
                         const messages = await messagesResponse.json();
                         return {
@@ -1132,50 +1054,36 @@ export default function App() {
             }
         } catch (error) {
             console.error('Error:', error);
-            const errorMessage = { 
-                id: Date.now() + 1, 
-                text: "Sorry, I encountered an error while generating the story. Please try again.", 
-                isUser: false, 
-                feedback: null 
-            };
-            updatedChats = updatedChats.map(chat => {
-                if (chat.id === chatId) {
-                    return { ...chat, messages: [...chat.messages, errorMessage] };
-                }
-                return chat;
-            });
-            setChats(updatedChats);
+            alert('Failed to generate response from backend. Please try again.');
         }
     };
 
     const createNewChat = async (isProjectChat = false) => {
         try {
-            const token = localStorage.getItem('token');
             const chatData = {
                 title: 'New Chat ' + (chats.length + 1),
                 project_id: isProjectChat && activeProject ? activeProject.id : null
             };
-            
+
             const response = await fetch('http://127.0.0.1:8000/chats/', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(chatData)
             });
-            
+
             if (response.ok) {
                 const newChat = await response.json();
                 const chatWithMessages = {
                     id: newChat.id,
                     title: newChat.title,
                     projectId: newChat.project_id,
-                    messages: [{ 
-                        id: Date.now() + 1, 
-                        text: `Hello! Ready to craft some user stories. What's the requirement?`, 
-                        isUser: false, 
-                        feedback: null 
+                    messages: [{
+                        id: Date.now() + 1,
+                        text: `Hello! Ready to craft some user stories. What's the requirement?`,
+                        isUser: false,
+                        feedback: null
                     }]
                 };
                 setChats(prev => [...prev, chatWithMessages]);
@@ -1184,16 +1092,30 @@ export default function App() {
             }
         } catch (error) {
             console.error('Error creating new chat:', error);
+            // Fallback: local chat so Get Started always works
+            const localChatId = Date.now();
+            const chatWithMessages = {
+                id: localChatId,
+                title: 'New Chat ' + (chats.length + 1),
+                projectId: isProjectChat && activeProject ? activeProject.id : null,
+                messages: [{
+                    id: localChatId + 1,
+                    text: `Hello! Ready to craft some user stories. What's the requirement?`,
+                    isUser: false,
+                    feedback: null
+                }]
+            };
+            setChats(prev => [...prev, chatWithMessages]);
+            setActiveChatId(localChatId);
+            setPage('chat');
         }
     };
 
     const handleLogin = (userData) => {
         setUser(userData);
-        // The token is already stored in localStorage by the LoginPage component
     };
 
     const handleLogout = () => {
-        localStorage.removeItem('token');
         setUser(null);
         setActiveProject(null);
         setProjects([]);
@@ -1226,6 +1148,22 @@ export default function App() {
         setPage('chat');
     };
     const handleContinueWithoutProject = async () => {
+        // Ensure a user object exists for UI components that expect it
+        if (!user) {
+            setUser({ name: 'Guest', email: 'guest@example.com', id: 'guest' });
+        }
+
+        // If there is an existing chat, open the most recent one
+        if (chats && chats.length > 0) {
+            const lastChat = chats[chats.length - 1];
+            const projectForChat = lastChat.projectId ? projects.find(p => p.id === lastChat.projectId) : null;
+            setActiveProject(projectForChat || null);
+            setActiveChatId(lastChat.id);
+            setPage('chat');
+            return;
+        }
+
+        // Otherwise create a new chat
         setActiveProject(null);
         await createNewChat(false);
     };
@@ -1312,7 +1250,7 @@ export default function App() {
             case 'dashboard': return <DashboardPage user={user} projects={projects} chats={chats.filter(c => !c.projectId)} onNewProject={() => setShowNewProjectModal(true)} onSelectProject={handleSelectProject} onLogout={handleLogout} onContinueWithoutProject={handleContinueWithoutProject} onSelectChat={handleSelectChat} onProfileClick={() => setShowProfileModal(true)} onSettingsClick={() => setShowSettingsModal(true)} theme={theme} onRename={handleRename} onDelete={handleDelete} />;
             case 'chat': return <ChatInterface user={user} project={activeProject} chats={activeProject ? chats.filter(c => c.projectId === activeProject.id) : chats.filter(c => !c.projectId)} activeChatId={activeChatId} onLogout={handleLogout} onBackToDashboard={() => setPage('dashboard')} onNewChat={() => createNewChat(!!activeProject)} onSelectChat={(id) => setActiveChatId(id)} onCreateProject={() => setShowNewProjectModal(true)} onProfileClick={() => setShowProfileModal(true)} onSettingsClick={() => setShowSettingsModal(true)} theme={theme} onSendMessage={handleSendMessage} onFeedback={handleFeedback} onDelete={handleDelete} />;
             case 'home':
-            default: return <HomePage setPage={setPage} theme={theme} />;
+            default: return <HomePage setPage={setPage} theme={theme} onGetStarted={handleContinueWithoutProject} />;
         }
     };
 
